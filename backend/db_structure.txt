@@ -1,0 +1,99 @@
+database structure draft-1
+// Use DBML to define your database structure
+// Docs: https://dbml.dbdiagram.io/docs
+
+Table main_db {
+  building_id varchar [primary key] 
+  building_details varchar 
+  applicant_name varchar
+  property_address varchar
+  consent_no integer
+  lot_no integer
+
+  created_at timestamp 
+}
+
+Table sub_floor {
+  inspection_id integer [primary key]
+  
+  created_at timestamp
+  building_id varchar 
+
+}
+
+Table license_check_sub_floor {
+    inspection_id integer
+    lbp_onsite boolean
+    license_sighted boolean
+    license_no integer
+    created_at timestamp
+}
+
+Table final_inspection_general {
+  inspection_id integer 
+  building_id varchar 
+  title varchar
+  body text [note: 'Content of the post']
+  user_id integer
+  status varchar
+  created_at timestamp
+}
+Table license_check_final_inspection_general {
+    inspection_id integer
+    lbp_onsite boolean
+    license_sighted boolean
+    license_no integer
+    created_at timestamp
+}
+Table final_inspection_general_interior{
+  inspection_id integer
+  safety_glass boolean
+  ceiling_insulation boolean
+  kitchen_complete boolean
+  smoke_alarm boolean
+  height_of_windows boolean
+  heater_checklist varchar
+}
+
+Table final_inspection_general_exterior{
+  inspection_id integer
+  pools_checklist varchar
+  vermin_proofing boolean
+  flashing_sealants boolean
+  ground_height boolean
+  landscaping varchar
+  brick_veneer varchar
+}
+
+Table media_general_exterior {
+  media_id integer [primary key]
+  inspection_id integer 
+  form_item varchar
+  checklist_item varchar 
+  media_type varchar 
+  file_path varchar 
+  created_at timestamp
+}
+
+Ref: "final_inspection_general"."inspection_id" < "main_db"."building_id"
+
+Ref: "sub_floor"."inspection_id" < "main_db"."building_id"
+
+
+Ref: "license_check_sub_floor"."lbp_onsite" < "sub_floor"."inspection_id"
+
+Ref: "license_check_final_inspection_general"."inspection_id" < "final_inspection_general"."inspection_id"
+
+Ref: "final_inspection_general_interior"."inspection_id" < "final_inspection_general"."inspection_id"
+
+Ref: "final_inspection_general_exterior"."inspection_id" < "final_inspection_general"."inspection_id"
+
+Ref: "media_general_exterior"."inspection_id" < "final_inspection_general_exterior"."inspection_id"
+
+Ref: "media_general_exterior"."inspection_id" < "final_inspection_general"."inspection_id"
+
+Ref: "media_general_exterior"."inspection_id" < "sub_floor"."inspection_id"
+
+Ref: "media_general_exterior"."inspection_id" < "final_inspection_general_interior"."inspection_id"
+
+
