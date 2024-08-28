@@ -1,83 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import './App.css';
 import * as speechsdk from 'microsoft-cognitiveservices-speech-sdk';
 
 function App() {
-    const canvasRef = useRef(null);
-    const audioContextRef = useRef(null);
-    const analyserRef = useRef(null);
-    const dataArrayRef = useRef(null);
-
-    useEffect(() => {
-        const initAudio = async () => {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            audioContextRef.current = audioContext;
-
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const source = audioContext.createMediaStreamSource(stream);
-
-            const analyser = audioContext.createAnalyser();
-            analyser.fftSize = 2048;
-            analyserRef.current = analyser;
-
-            const bufferLength = analyser.frequencyBinCount;
-            const dataArray = new Uint8Array(bufferLength);
-            dataArrayRef.current = dataArray;
-
-            source.connect(analyser);
-            draw();
-        };
-
-        const draw = () => {
-            const canvas = canvasRef.current;
-            const canvasCtx = canvas.getContext('2d');
-            const analyser = analyserRef.current;
-            const dataArray = dataArrayRef.current;
-
-            const drawVisual = () => {
-                requestAnimationFrame(drawVisual);
-
-                analyser.getByteTimeDomainData(dataArray);
-
-                canvasCtx.fillStyle = 'rgb(200, 200, 200)';
-                canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
-
-                canvasCtx.lineWidth = 2;
-                canvasCtx.strokeStyle = 'rgb(0, 0, 0)';
-
-                canvasCtx.beginPath();
-
-                const sliceWidth = canvas.width * 1.0 / dataArray.length;
-                let x = 0;
-
-                for (let i = 0; i < dataArray.length; i++) {
-                    const v = dataArray[i] / 128.0;
-                    const y = v * canvas.height / 2;
-
-                    if (i === 0) {
-                        canvasCtx.moveTo(x, y);
-                    } else {
-                        canvasCtx.lineTo(x, y);
-                    }
-
-                    x += sliceWidth;
-                }
-
-                canvasCtx.lineTo(canvas.width, canvas.height / 2);
-                canvasCtx.stroke();
-            };
-
-            drawVisual();
-        };
-
-        initAudio();
-
-        return () => {
-            if (audioContextRef.current) {
-                audioContextRef.current.close();
-            }
-        };
-    }, []);
+    const [mediaRecorder, setMediaRecorder] = useState(null);
+    const [isRecording, setIsRecording] = useState(false);
 
     const handleAudioRecognizing = async () => {
         const speechConfig = speechsdk.SpeechConfig.fromSubscription("***subscriptionkey***", "**region**");
@@ -110,6 +37,41 @@ function App() {
         // Implement image recognizing logic here
     };
 
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const recorder = new MediaRecorder(stream);
+            setMediaRecorder(recorder);
+
+            const chunks = [];
+            recorder.ondataavailable = event => {
+                chunks.push(event.data);
+            };
+
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'audio/wav' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.display = 'none';
+                a.href = url;
+                a.download = 'recording.wav';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            };
+
+            recorder.start();
+            setIsRecording(true);
+
+            setTimeout(() => {
+                recorder.stop();
+                setIsRecording(false);
+            }, 10000); // Stop recording after 10 seconds
+        } catch (error) {
+            console.error('Error starting recording:', error);
+        }
+    };
+
     return (
         <div className="App">
             <header className="App-header">
@@ -118,8 +80,10 @@ function App() {
                     <button onClick={handleAudioRecognizing}>Audio Recognizing</button>
                     <button onClick={handleVideoRecognizing}>Video Recognizing</button>
                     <button onClick={handleImageRecognizing}>Image Recognizing</button>
+                    <button onClick={startRecording} disabled={isRecording}>
+                        {isRecording ? 'Recording...' : 'Start Recording'}
+                    </button>
                 </div>
-                <canvas ref={canvasRef} width="640" height="100"></canvas>
             </header>
         </div>
     );
